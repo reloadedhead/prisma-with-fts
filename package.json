@@ -1,5 +1,5 @@
 {
-  "name": "my-remix-app",
+  "name": "my-remix-app-ae9c",
   "private": true,
   "sideEffects": false,
   "scripts": {
@@ -11,9 +11,7 @@
     "dev:remix": "remix dev --manual -c \"node --require ./mocks ./build/server.js\"",
     "docker": "docker compose up -d",
     "format": "prettier --write .",
-    "format:repo": "npm run format && npm run lint:repo -- --fix",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
-    "lint:repo": "npm run lint -- --config ./.eslintrc.repo.js",
     "setup": "prisma generate && prisma migrate deploy && prisma db seed",
     "start": "cross-env NODE_ENV=production node ./build/server.js",
     "start:mocks": "cross-env NODE_ENV=production node --require ./mocks --require dotenv/config ./build/server.js",
@@ -76,8 +74,6 @@
     "eslint": "^8.47.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-cypress": "^2.14.0",
-    "eslint-plugin-markdown": "^3.0.1",
-    "eslint-plugin-prefer-let": "^3.0.1",
     "happy-dom": "^10.10.4",
     "msw": "^1.2.3",
     "npm-run-all": "^4.1.5",
