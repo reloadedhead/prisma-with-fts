@@ -17,4 +17,8 @@ model Movie {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  search Unsupported("tsvector")? @default(dbgenerated("''::tsvector"))
+
+  @@index([search], type: Gin)
 }
