@@ -1,44 +1,40 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 const prisma = new PrismaClient();
 
+interface Movie {
+  title: string;
+  year: number;
+  genres: string[];
+  extract?: string;
+  thumbnail?: string;
+}
+
+function parseMoviesFile(): Movie[] {
+  const rawMovies = readFileSync(path.join(__dirname, "movies.json"));
+  return JSON.parse(rawMovies as unknown as string);
+}
+
 async function seed() {
-  const email = "rachel@remix.run";
+  const movies = parseMoviesFile();
+  /** Deletes existing data. */
+  await prisma.movie.deleteMany();
 
-  // cleanup the existing database
-  await prisma.user.delete({ where: { email } }).catch(() => {
-    // no worries if it doesn't exist yet
-  });
+  /** Creates movies */
 
-  const hashedPassword = await bcrypt.hash("racheliscool", 10);
-
-  const user = await prisma.user.create({
-    data: {
-      email,
-      password: {
-        create: {
-          hash: hashedPassword,
-        },
+  for (const movie of movies) {
+    await prisma.movie.create({
+      data: {
+        title: movie.title,
+        year: movie.year,
+        genre: movie.genres.at(0),
+        extract: movie.extract,
+        thumbnail: movie.thumbnail,
       },
-    },
-  });
-
-  await prisma.note.create({
-    data: {
-      title: "My first note",
-      body: "Hello, world!",
-      userId: user.id,
-    },
-  });
-
-  await prisma.note.create({
-    data: {
-      title: "My second note",
-      body: "Hello, world!",
-      userId: user.id,
-    },
-  });
+    });
+  }
 
   console.log(`Database has been seeded. 🌱`);
 }
