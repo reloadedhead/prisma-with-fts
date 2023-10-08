@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, useLoaderData } from "@remix-run/react";
@@ -8,10 +9,18 @@ export const meta: MetaFunction = () => [{ title: "Movies" }];
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const searchQuery = url.searchParams.get("search");
-  const movies = await prisma.movie.findMany({
-    take: 10,
-    where: { title: { contains: searchQuery ?? undefined } },
-  });
+
+  const movies = await prisma.$queryRaw<MovieRecord[]>`
+    WITH query AS (SELECT to_tsquery(string_agg(lexeme || ':*', ' & ' ORDER BY positions)) AS q FROM unnest(to_tsvector(${searchQuery})))
+    SELECT
+      id, title, genre, year, extract, ts_rank(search, query.q) AS rank
+    FROM
+      "Movie", query
+    ${searchQuery ? Prisma.sql`WHERE search @@ query.q` : Prisma.empty}
+    ORDER BY
+      year, rank
+    LIMIT 10
+  `
 
   return json(movies);
 }
@@ -96,4 +105,13 @@ function SearchInput({ className }: SearchInputProps) {
       </div>
     </div>
   );
+}
+
+/** Direct representation of a row in the Movie table. */
+interface MovieRecord {
+  id: string
+  title: string
+  year: number
+  genre?: string
+  extract: string
 }
