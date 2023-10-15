@@ -10,7 +10,7 @@ Postgres takes documents and parses lexemes from them using **dictionaries**. Th
 
 ## Meet `tsvector`
 
-`tsvector` is a built-in data type in Postgres [^1], that represents a sorted list of distinct, normalised lexemes. If we consider the following Prisma model
+`tsvector` is a built-in data type in Postgres[^1], that represents a sorted list of distinct, normalised lexemes. If we consider the following Prisma model
 
 ```typescript
 model Movie {
@@ -53,14 +53,14 @@ ALTER TABLE "Movie"
 SET search = to_tsvector('english', extract)
 ```
 
-`to_tsvector` is one of the many built-in functions in Postgres[ˆ3] that will take your document (and an optional dictionary) and will create a vector for it. However, what happens if the extract gets updated? What if I add a new row? Well, we need to recalculate. And what a nice opportunity for generated columns[ˆ4] to shine, right? With SQL, you would do the following.
+`to_tsvector` is one of the many built-in functions in Postgres[^3] that will take your document (and an optional dictionary) and will create a vector for it. However, what happens if the extract gets updated? What if I add a new row? Well, we need to recalculate. And what a nice opportunity for generated columns[^4] to shine, right? With SQL, you would do the following.
 
 ```SQL
 ALTER TABLE "Movie" ADD COLUMN search tsvector
 GENERATED ALWAYS AS (to_tsvector('english', extract)) STORED;
 ```
 
-But life is not that simple, because we are using Prisma. Even though the Prisma team provides us with `npx prisma migrate dev --create-only`, a way of tinkering with the SQL generated in migrations, at the time of writing, there is a bug that prevents us from setting up a generated column[ˆ5]. Luckily, this is not the end, this is just another path! We can still achieve the same result using triggers! 
+But life is not that simple, because we are using Prisma. Even though the Prisma team provides us with `npx prisma migrate dev --create-only`, a way of tinkering with the SQL generated in migrations, at the time of writing, there is a bug that prevents us from setting up a generated column[^5]. Luckily, this is not the end, this is just another path! We can still achieve the same result using triggers! 
 
 ```sql
 -- Function to be invoked by trigger
@@ -84,7 +84,7 @@ CREATE TRIGGER "update_tsvector"
 ```
 
 ## Time to query
-You now have your `tsvector` column set up, it's time to query. And yeah, you do it with a `ts_query`. There are many handy functions that can help you out converting your text search query into something Postgres will understand. `phraseto_tsquery` can take a dictionary and `websearch_to_tsquery` approximates the behavior of some common web search tools. You can choose your the one that fits your needs[ˆ3]. You can also go the extra mile and do fuzzy search. By converting your text search into a `tsvector`, you can mix lexemes and regular expressions to create a fuzzy `tsquery`:
+You now have your `tsvector` column set up, it's time to query. And yeah, you do it with a `ts_query`. There are many handy functions that can help you out converting your text search query into something Postgres will understand. `phraseto_tsquery` can take a dictionary and `websearch_to_tsquery` approximates the behavior of some common web search tools. You can choose your the one that fits your needs[^3]. You can also go the extra mile and do fuzzy search. By converting your text search into a `tsvector`, you can mix lexemes and regular expressions to create a fuzzy `tsquery`:
 
 ```sql
 SELECT to_tsquery(string_agg(lexeme || ':*', ' & ' ORDER BY positions)) AS q FROM unnest(to_tsvector(${searchQuery}))
@@ -114,21 +114,16 @@ interface MovieRecord {
 }
 ```
 
-Note that we order by `ts_rank`[ˆ6], so we can provide best matching results first!
+Note that we order by `ts_rank` [^6], so we can provide best matching results first!
 
 # Conclusion
 All in all, you can build a powerful search feature without relying on third-party software, database duplication and complicated syntaxes. You just need Postgres and SQL, things that you already have. I am pretty sure that other DBMSs handle full text search in a similar manner. The implementation is simple, straightforward, flexible and maintainable. And if you are using Prisma, you can achieve the same results with a less elegant but still functional approach.
 
-PS: Don't forget to index!
+PS: Don't forget to index with `GIN`!
 
 [^1]: [`tsvector` in Postgres documentation](https://www.postgresql.org/docs/current/datatype-textsearch.html#DATATYPE-TSVECTOR).
-
-[ˆ2]: [Open issue for `tsvector` support in Prisma's repository](https://github.com/prisma/prisma/issues/5027).
-
-[ˆ3]: [Text search functions and operators](https://www.postgresql.org/docs/16/functions-textsearch.html#FUNCTIONS-TEXTSEARCH).
-
-[ˆ4]: [Generated columns in Postgres](https://www.postgresql.org/docs/current/ddl-generated-columns.html#DDL-GENERATED-COLUMNS).
-
-[ˆ5]: [Support for generated columns](https://github.com/prisma/prisma/issues/6336).
-
-[ˆ6]: [Ranking search results](https://www.postgresql.org/docs/16/textsearch-controls.html#TEXTSEARCH-RANKING)
+[^2]: [Open issue for `tsvector` support in Prisma's repository](https://github.com/prisma/prisma/issues/5027).
+[^3]: [Text search functions and operators](https://www.postgresql.org/docs/16/functions-textsearch.html#FUNCTIONS-TEXTSEARCH).
+[^4]: [Generated columns in Postgres](https://www.postgresql.org/docs/current/ddl-generated-columns.html#DDL-GENERATED-COLUMNS).
+[^5]: [Support for generated columns](https://github.com/prisma/prisma/issues/6336).
+[^6]: [Ranking search results](https://www.postgresql.org/docs/16/textsearch-controls.html#TEXTSEARCH-RANKING)
